@@ -170,35 +170,6 @@ GOOGLE_MAPS_API_KEY=your_production_maps_api_key
 GITHUB_REPO=username/earthquake-images
 ```
 
-### Docker Deployment (Optional)
-
-Create a `Dockerfile` in the root directory:
-
-```dockerfile
-FROM node:16-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY server/package*.json ./server/
-COPY client/package*.json ./client/
-
-# Install dependencies
-RUN npm install
-RUN cd server && npm install
-RUN cd client && npm install
-
-# Build React app
-RUN cd client && npm run build
-
-# Copy application files
-COPY . .
-
-EXPOSE 5000
-
-CMD ["npm", "start"]
-```
 
 ## 🔐 Security Features
 

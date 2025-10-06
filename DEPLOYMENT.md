@@ -2,7 +2,7 @@
 
 This guide covers different deployment options for the Earthquake Cebu application.
 
-## 🚀 Quick Deployment Options
+## 🚀 Deployment Options
 
 ### Option 1: Traditional VPS/Server Deployment
 
@@ -46,57 +46,7 @@ This guide covers different deployment options for the Earthquake Cebu applicati
    pm2 save
    ```
 
-### Option 2: Docker Deployment
-
-#### Using Docker Compose (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd earthquake-cebu
-   ```
-
-2. **Configure environment**
-   ```bash
-   cp env.example .env
-   # Edit .env with your production values
-   ```
-
-3. **Start with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-#### Using Docker directly
-
-1. **Build the image**
-   ```bash
-   docker build -t earthquake-cebu .
-   ```
-
-2. **Run with MySQL**
-   ```bash
-   # Start MySQL
-   docker run -d --name mysql \
-     -e MYSQL_ROOT_PASSWORD=your_password \
-     -e MYSQL_DATABASE=earthquake_cebu \
-     -p 3306:3306 \
-     mysql:8.0
-
-   # Start the application
-   docker run -d --name earthquake-cebu \
-     --link mysql:mysql \
-     -p 5000:5000 \
-     -e DB_HOST=mysql \
-     -e DB_USER=root \
-     -e DB_PASSWORD=your_password \
-     -e DB_NAME=earthquake_cebu \
-     -e JWT_SECRET=your_jwt_secret \
-     -e GOOGLE_MAPS_API_KEY=your_api_key \
-     earthquake-cebu
-   ```
-
-### Option 3: Cloud Platform Deployment
+### Option 2: Cloud Platform Deployment
 
 #### Heroku
 
@@ -135,6 +85,13 @@ This guide covers different deployment options for the Earthquake Cebu applicati
 2. **Install Node.js and MySQL**
 3. **Follow traditional VPS deployment steps**
 4. **Configure security groups for ports 80, 443, 22**
+
+#### Vercel (Frontend) + Railway/Render (Backend)
+
+1. **Deploy backend to Railway or Render**
+2. **Deploy frontend to Vercel**
+3. **Configure environment variables**
+4. **Set up database connection**
 
 ## 🔧 Production Configuration
 
@@ -237,9 +194,9 @@ The application includes health check endpoints:
    pm2 logs earthquake-cebu
    ```
 
-2. **Docker logs**
+2. **Application logs**
    ```bash
-   docker logs earthquake-cebu
+   tail -f /var/log/earthquake-cebu/app.log
    ```
 
 ### Database Backups
