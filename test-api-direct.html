@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps API Direct Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #map { height: 400px; width: 100%; border: 1px solid #ccc; }
+        .status { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Google Maps API Direct Test</h1>
+    <div id="status" class="status">Testing API key...</div>
+    <div id="map"></div>
+    
+    <script>
+        const API_KEY = 'AIzaSyDIJTFhIp-q6k6i--2kU2CwEQfzTp_RG08';
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'status error' : 'status success';
+        }
+        
+        function initMap() {
+            try {
+                const cebu = { lat: 10.3157, lng: 123.8854 };
+                const map = new google.maps.Map(document.getElementById("map"), {
+                    zoom: 11,
+                    center: cebu,
+                });
+                
+                const marker = new google.maps.Marker({
+                    position: cebu,
+                    map: map,
+                    title: "Cebu City"
+                });
+                
+                updateStatus('✅ Google Maps loaded successfully! API key is working.');
+            } catch (error) {
+                updateStatus('❌ Error initializing map: ' + error.message, true);
+            }
+        }
+        
+        function handleError() {
+            updateStatus('❌ Failed to load Google Maps API. Check console for details.', true);
+        }
+        
+        // Load the Google Maps API
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = handleError;
+        document.head.appendChild(script);
+        
+        // Set a timeout to detect if the API fails to load
+        setTimeout(() => {
+            if (!window.google) {
+                updateStatus('❌ Google Maps API failed to load within 10 seconds. Check API key and restrictions.', true);
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

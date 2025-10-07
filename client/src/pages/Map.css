@@ -24,6 +24,78 @@
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.map-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.map-fallback {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.map-fallback h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.map-fallback p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.fallback-markers {
+  max-width: 400px;
+  width: 100%;
+}
+
+.fallback-markers h4 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.fallback-marker {
+  background: white;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: left;
+}
+
+.fallback-marker strong {
+  color: #333;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.fallback-marker p {
+  color: #666;
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .info-window {

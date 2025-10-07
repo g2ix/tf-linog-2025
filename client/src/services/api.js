@@ -36,6 +36,8 @@ export const apiService = {
   getMarkers: () => api.get('/markers'),
   getUpdates: () => api.get('/updates'),
   getDonations: () => api.get('/donations'),
+  getImageGroups: () => api.get('/image-groups'),
+  getImageGroup: (id) => api.get(`/image-groups/${id}`),
 
   // Admin endpoints
   login: (credentials) => api.post('/admin/login', credentials),
@@ -49,6 +51,15 @@ export const apiService = {
   addMarker: (data) => api.post('/admin/marker', data),
   editMarker: (id, data) => api.put(`/admin/marker/${id}`, data),
   deleteMarker: (id) => api.delete(`/admin/marker/${id}`),
+  
+  // Image groups management
+  addImageGroup: (data) => api.post('/admin/image-group', data),
+  editImageGroup: (id, data) => api.put(`/admin/image-group/${id}`, data),
+  deleteImageGroup: (id) => api.delete(`/admin/image-group/${id}`),
+  
+  // Images management
+  addImage: (data) => api.post('/admin/image', data),
+  deleteImage: (id) => api.delete(`/admin/image/${id}`),
 };
 
 export default api;

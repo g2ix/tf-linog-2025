@@ -27,7 +27,11 @@ const Header = () => {
       <div className="container">
         <div className="header-content">
           <Link to="/" className="logo" onClick={closeMenu}>
-            <h1>🌍 Earthquake Cebu</h1>
+            <img src="/logo.svg" alt="SVD-PHS Task Force Linog" className="logo-image" />
+            <div className="logo-text">
+              <h1>Earthquake Cebu</h1>
+              <p>Disaster Response System</p>
+            </div>
           </Link>
           
           <button className="menu-toggle" onClick={toggleMenu}>

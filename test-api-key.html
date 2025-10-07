@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps API Test</title>
+</head>
+<body>
+    <h1>Google Maps API Test</h1>
+    <div id="map" style="height: 400px; width: 100%;"></div>
+    
+    <script>
+        // Your real Google Maps API key
+        const API_KEY = 'AIzaSyDIJTFhIp-q6k6i--2kU2CwEQfzTp_RG08';
+        
+        function initMap() {
+            const cebu = { lat: 10.3157, lng: 123.8854 };
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 11,
+                center: cebu,
+            });
+            
+            const marker = new google.maps.Marker({
+                position: cebu,
+                map: map,
+                title: "Cebu City"
+            });
+        }
+    </script>
+    
+    <script async defer 
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIJTFhIp-q6k6i--2kU2CwEQfzTp_RG08&callback=initMap">
+    </script>
+</body>
+</html>

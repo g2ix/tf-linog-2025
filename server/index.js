@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -28,7 +29,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'earthquake_cebu',
+  database: process.env.DB_NAME || 'tf_linog',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -54,8 +55,15 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Serve static files from React build
-app.use(express.static('../client/build'));
+// Serve static files from React build (only in production)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/build')));
+}
+
+// Handle favicon requests
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
 
 // API Routes
 
@@ -63,9 +71,16 @@ app.use(express.static('../client/build'));
 app.get('/api/markers', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT id, latitude, longitude, description, image_url, created_at FROM markers ORDER BY created_at DESC'
+      'SELECT id, latitude, longitude, description, image_url, images, created_at FROM markers ORDER BY created_at DESC'
     );
-    res.json(rows);
+    
+    // Parse JSON images for each marker
+    const markers = rows.map(marker => ({
+      ...marker,
+      images: marker.images ? JSON.parse(marker.images) : []
+    }));
+    
+    res.json(markers);
   } catch (error) {
     console.error('Error fetching markers:', error);
     res.status(500).json({ error: 'Failed to fetch markers' });
@@ -95,6 +110,63 @@ app.get('/api/donations', async (req, res) => {
   } catch (error) {
     console.error('Error fetching donations:', error);
     res.status(500).json({ error: 'Failed to fetch donations' });
+  }
+});
+
+// Get all image groups with their images
+app.get('/api/image-groups', async (req, res) => {
+  try {
+    const [groups] = await pool.execute(
+      `SELECT ig.id, ig.title, ig.description, ig.location_name, ig.latitude, ig.longitude, ig.created_at,
+       COUNT(i.id) as image_count
+       FROM image_groups ig
+       LEFT JOIN images i ON ig.id = i.group_id
+       GROUP BY ig.id
+       ORDER BY ig.created_at DESC`
+    );
+    
+    // Get images for each group
+    for (let group of groups) {
+      const [images] = await pool.execute(
+        'SELECT id, image_url, caption, display_order FROM images WHERE group_id = ? ORDER BY display_order, created_at',
+        [group.id]
+      );
+      group.images = images;
+    }
+    
+    res.json(groups);
+  } catch (error) {
+    console.error('Error fetching image groups:', error);
+    res.status(500).json({ error: 'Failed to fetch image groups' });
+  }
+});
+
+// Get single image group with all images
+app.get('/api/image-groups/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [groups] = await pool.execute(
+      'SELECT * FROM image_groups WHERE id = ?',
+      [id]
+    );
+    
+    if (groups.length === 0) {
+      return res.status(404).json({ error: 'Image group not found' });
+    }
+    
+    const [images] = await pool.execute(
+      'SELECT * FROM images WHERE group_id = ? ORDER BY display_order, created_at',
+      [id]
+    );
+    
+    const group = groups[0];
+    group.images = images;
+    
+    res.json(group);
+  } catch (error) {
+    console.error('Error fetching image group:', error);
+    res.status(500).json({ error: 'Failed to fetch image group' });
   }
 });
 
@@ -160,15 +232,17 @@ app.post('/api/admin/update', authenticateToken, async (req, res) => {
 // Add new marker (admin only)
 app.post('/api/admin/marker', authenticateToken, async (req, res) => {
   try {
-    const { latitude, longitude, description, image_url } = req.body;
+    const { latitude, longitude, description, image_url, images } = req.body;
 
     if (!latitude || !longitude || !description) {
       return res.status(400).json({ error: 'Latitude, longitude, and description required' });
     }
 
+    const imagesJson = images ? JSON.stringify(images) : null;
+
     const [result] = await pool.execute(
-      'INSERT INTO markers (latitude, longitude, description, image_url) VALUES (?, ?, ?, ?)',
-      [latitude, longitude, description, image_url || null]
+      'INSERT INTO markers (latitude, longitude, description, image_url, images) VALUES (?, ?, ?, ?, ?)',
+      [latitude, longitude, description, image_url || null, imagesJson]
     );
 
     res.json({ id: result.insertId, message: 'Marker added successfully' });
@@ -208,15 +282,17 @@ app.put('/api/admin/update/:id', authenticateToken, async (req, res) => {
 app.put('/api/admin/marker/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { latitude, longitude, description, image_url } = req.body;
+    const { latitude, longitude, description, image_url, images } = req.body;
 
     if (!latitude || !longitude || !description) {
       return res.status(400).json({ error: 'Latitude, longitude, and description required' });
     }
 
+    const imagesJson = images ? JSON.stringify(images) : null;
+
     const [result] = await pool.execute(
-      'UPDATE markers SET latitude = ?, longitude = ?, description = ?, image_url = ? WHERE id = ?',
-      [latitude, longitude, description, image_url || null, id]
+      'UPDATE markers SET latitude = ?, longitude = ?, description = ?, image_url = ?, images = ? WHERE id = ?',
+      [latitude, longitude, description, image_url || null, imagesJson, id]
     );
 
     if (result.affectedRows === 0) {
@@ -266,10 +342,116 @@ app.delete('/api/admin/marker/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+// Add new image group (admin only)
+app.post('/api/admin/image-group', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, location_name, latitude, longitude } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const [result] = await pool.execute(
+      'INSERT INTO image_groups (title, description, location_name, latitude, longitude) VALUES (?, ?, ?, ?, ?)',
+      [title, description || null, location_name || null, latitude || null, longitude || null]
+    );
+
+    res.json({ id: result.insertId, message: 'Image group added successfully' });
+  } catch (error) {
+    console.error('Error adding image group:', error);
+    res.status(500).json({ error: 'Failed to add image group' });
+  }
 });
+
+// Add image to group (admin only)
+app.post('/api/admin/image', authenticateToken, async (req, res) => {
+  try {
+    const { group_id, image_url, caption, display_order } = req.body;
+
+    if (!group_id || !image_url) {
+      return res.status(400).json({ error: 'Group ID and image URL are required' });
+    }
+
+    const [result] = await pool.execute(
+      'INSERT INTO images (group_id, image_url, caption, display_order) VALUES (?, ?, ?, ?)',
+      [group_id, image_url, caption || null, display_order || 0]
+    );
+
+    res.json({ id: result.insertId, message: 'Image added successfully' });
+  } catch (error) {
+    console.error('Error adding image:', error);
+    res.status(500).json({ error: 'Failed to add image' });
+  }
+});
+
+// Edit image group (admin only)
+app.put('/api/admin/image-group/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, location_name, latitude, longitude } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const [result] = await pool.execute(
+      'UPDATE image_groups SET title = ?, description = ?, location_name = ?, latitude = ?, longitude = ? WHERE id = ?',
+      [title, description || null, location_name || null, latitude || null, longitude || null, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Image group not found' });
+    }
+
+    res.json({ message: 'Image group updated successfully' });
+  } catch (error) {
+    console.error('Error updating image group:', error);
+    res.status(500).json({ error: 'Failed to update image group' });
+  }
+});
+
+// Delete image group (admin only)
+app.delete('/api/admin/image-group/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute('DELETE FROM image_groups WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Image group not found' });
+    }
+
+    res.json({ message: 'Image group deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting image group:', error);
+    res.status(500).json({ error: 'Failed to delete image group' });
+  }
+});
+
+// Delete image (admin only)
+app.delete('/api/admin/image/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute('DELETE FROM images WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    res.json({ message: 'Image deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
+// Serve React app for all other routes (only in production)
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((error, req, res, next) => {
